@@ -33,7 +33,8 @@ function showResults() {
 
 function hideResults() {
     ingredientList.innerHTML = '';
-    recipeOutput.textContent = '';
+    // IMPORTANT: Use innerHTML for recipeOutput because marked.parse returns HTML
+    recipeOutput.innerHTML = ''; // Changed from .textContent
     ingredientsHeading.style.display = 'none';
     recipeHeading.style.display = 'none';
 }
@@ -89,62 +90,67 @@ getRecipeButton.addEventListener('click', async function() {
     showLoading(); // Show spinner and disable button
 
     try {
-    // --- Call Your Serverless Function (instead of direct Gemini API) ---
-    // The URL for your function depends on the hosting platform and folder structure:
-    // For Netlify Functions in 'netlify/functions/gemini-proxy.js', URL is typically '/.netlify/functions/gemini-proxy'
-    // For Vercel Functions in 'api/gemini-proxy.js', URL is typically '/api/gemini-proxy'
-    const functionEndpoint = '/api/gemini-proxy'; // Adjust if using Netlify: '/.netlify/functions/gemini-proxy'
+        // --- Call Your Serverless Function (instead of direct Gemini API) ---
+        const functionEndpoint = '/api/gemini-proxy'; 
 
-    const proxyResponse = await fetch(functionEndpoint, { 
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ base64Image: base64Image }) // Send the image data to your function
-    });
+        const proxyResponse = await fetch(functionEndpoint, { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ base64Image: base64Image }) // Send the image data to your function
+        });
 
-    if (!proxyResponse.ok) {
-        const errorData = await proxyResponse.json();
-        throw new Error(errorData.error || `Proxy error: ${proxyResponse.statusText}`);
-    }
+        if (!proxyResponse.ok) {
+            const errorData = await proxyResponse.json();
+            throw new Error(errorData.error || `Proxy error: ${proxyResponse.statusText}`);
+        }
 
-    const geminiData = await proxyResponse.json();
-    console.log("Gemini Data from Proxy:", geminiData); // For debugging
+        const geminiData = await proxyResponse.json();
+        console.log("Gemini Data from Proxy:", geminiData); // For debugging
 
-    let generatedContent = '';
-    if (geminiData.candidates && geminiData.candidates[0] && geminiData.candidates[0].content && geminiData.candidates[0].content.parts[0]) {
-        generatedContent = geminiData.candidates[0].content.parts[0].text;
+        let generatedContent = '';
+        if (geminiData.candidates && geminiData.candidates[0] && geminiData.candidates[0].content && geminiData.candidates[0].content.parts[0]) {
+            generatedContent = geminiData.candidates[0].content.parts[0].text;
 
-        // --- Parse the generated content into ingredients and recipe ---
-        // (Keep this parsing logic as it is, assuming Gemini's output format is consistent)
-        const ingredientsMatch = generatedContent.match(/Ingredients:\s*\n([\s\S]*?)(?=(Recipe:|$))/i);
-        const recipeMatch = generatedContent.match(/Recipe:\s*\n([\s\S]*?)(?=(Tips:|$))/i);
-        const tipsMatch = generatedContent.match(/Tips:\s*\n([\s\S]*)/i);
+            // --- IMPROVED PARSING AND MARKDOWN RENDERING ---
+            // The goal is to get the full Markdown content and let 'marked' render it.
+            // We'll still extract ingredients for the list, but render the rest.
 
-        if (ingredientsMatch && ingredientsMatch[1]) {
-            const rawIngredients = ingredientsMatch[1].trim().split('\n').filter(Boolean);
-            ingredientList.innerHTML = rawIngredients.map(item => `<li>${item.replace(/^- /, '')}</li>`).join('');
+            // Optional: Remove "Could not generate..." if it still appears despite prompt
+            if (generatedContent.includes("Could not generate a clear recipe based on ingredients.")) {
+                generatedContent = generatedContent.replace("Could not generate a clear recipe based on ingredients.", "").trim();
+            }
+
+            // Extract ingredients for the bulleted list (still needed for `ingredientList`)
+            const ingredientsMatch = generatedContent.match(/Identified Ingredients:\s*\n([\s\S]*?)(?=(Recipe:|$))/i);
+            if (ingredientsMatch && ingredientsMatch[1]) {
+                const rawIngredients = ingredientsMatch[1].trim().split('\n').filter(Boolean);
+                // Clean up leading asterisks/dashes from ingredient lines for the ul
+                ingredientList.innerHTML = rawIngredients.map(item => `<li>${item.replace(/^[\*\-]\s*/, '').trim()}</li>`).join('');
+            } else {
+                ingredientList.innerHTML = '<li>No specific ingredients identified.</li>';
+            }
+
+            // Remove the "Identified Ingredients:" section from the content to be parsed by Marked,
+            // as we already handled it separately for the ingredientList.
+            let contentForMarked = generatedContent.replace(/Identified Ingredients:[\s\S]*?(?=(Recipe:|$))/i, '').trim();
+
+            // Convert the remaining Markdown content to HTML
+            // This is the core change: use marked.parse() and innerHTML
+            recipeOutput.innerHTML = marked.parse(contentForMarked);
+
+            showResults(); // Ensure headings are visible
+            
+            // Optional: Hide the ingredient list if no ingredients were found by the regex
+            if (!ingredientsMatch || !ingredientsMatch[1].trim()) {
+                ingredientsHeading.style.display = 'none';
+            }
+
+
         } else {
-            ingredientList.innerHTML = '<li>No specific ingredients identified.</li>';
+            showError('Gemini did not return a valid response from the proxy.');
         }
-
-        let recipeText = '';
-        if (recipeMatch && recipeMatch[1]) {
-            recipeText += recipeMatch[1].trim();
-        } else {
-            recipeText += 'Could not generate a clear recipe based on ingredients.';
-        }
-
-        if (tipsMatch && tipsMatch[1]) {
-            recipeText += '\n\n**Tips:**\n' + tipsMatch[1].trim();
-        }
-
-        recipeOutput.textContent = recipeText;
-
-        showResults();
-    } else {
-        showError('Gemini did not return a valid response from the proxy.');
-    }
 
     } catch (error) {
         console.error('Frontend Fetch Error:', error);

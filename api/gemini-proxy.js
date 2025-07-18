@@ -43,7 +43,7 @@ module.exports = async (req, res) => {
 
         const visionPrompt = [
             {
-                "text": "Identify the main ingredients in this image and list them. For example, 'chicken, rice, broccoli'. Then, suggest a simple, easy-to-cook meal recipe using these ingredients. Focus on common cooking methods and clear, concise steps. Also, include 1-2 practical tips for preparing this meal. Format your response clearly with a 'Ingredients:' section followed by a bulleted list, and then a 'Recipe:' section, and finally a 'Tips:' section."
+                "text": "Analyze the image for main food ingredients. List them clearly under a 'Identified Ingredients:' heading. Based ONLY on the identified ingredients, provide a simple, easy-to-cook meal recipe. If a recipe can be made, present it under a 'Recipe:' heading with detailed steps, yield, prep time, and cook time. If a recipe CANNOT be made from the ingredients, explicitly state 'No suitable recipe can be created from the provided ingredients.' under the 'Recipe:' heading. Finally, include 1-2 practical cooking tips under a 'Tips:' heading. Ensure consistent formatting using Markdown for headings, bolding, and bullet points."
             },
             {
                 "inlineData": {
