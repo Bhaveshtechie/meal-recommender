@@ -7,6 +7,7 @@ const loadingIndicator = document.getElementById('loadingIndicator');
 const errorDisplay = document.getElementById('errorDisplay');
 const ingredientsHeading = document.getElementById('ingredientsHeading');
 const recipeHeading = document.getElementById('recipeHeading');
+const cuisineSelect = document.getElementById('cuisineSelect');
 
 let base64Image = ''; // To store the Base64 representation of the image
 
@@ -57,6 +58,7 @@ imageUpload.addEventListener('change', function(event) {
         hideError(); // Clear previous errors
         hideResults(); // Clear previous results
         getRecipeButton.style.display = 'none'; // Hide button initially
+        cuisineSelect.style.display = 'none';
 
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -65,17 +67,20 @@ imageUpload.addEventListener('change', function(event) {
             // Get only the Base64 part (remove "data:image/jpeg;base64," prefix)
             base64Image = e.target.result.split(',')[1]; 
             getRecipeButton.style.display = 'block'; // Show button once image is loaded
+            cuisineSelect.style.display = 'block'; // Show cuisine select
         };
         reader.onerror = function() {
             showError('Failed to read image file.');
             imagePreview.style.display = 'none';
             base64Image = '';
+            cuisineSelect.style.display = 'none'; // Hide cuisine select on error
         };
         reader.readAsDataURL(file);
     } else {
         imagePreview.style.display = 'none';
         getRecipeButton.style.display = 'none';
         base64Image = '';
+        cuisineSelect.style.display = 'none'; // Hide cuisine select if no file
         hideResults();
         hideError();
     }
@@ -92,13 +97,14 @@ getRecipeButton.addEventListener('click', async function() {
     try {
         // --- Call Your Serverless Function (instead of direct Gemini API) ---
         const functionEndpoint = '/api/gemini-proxy'; 
+        const selectedCuisine = cuisineSelect.value; // Get selected cuisine
 
         const proxyResponse = await fetch(functionEndpoint, { 
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ base64Image: base64Image }) // Send the image data to your function
+            body: JSON.stringify({ base64Image: base64Image, cuisine: selectedCuisine })  // Send the image data to your function
         });
 
         if (!proxyResponse.ok) {

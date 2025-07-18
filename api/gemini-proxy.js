@@ -27,7 +27,7 @@ module.exports = async (req, res) => {
 
     // --- From here, the code assumes it's a POST request ---
     try {
-        const { base64Image } = req.body; 
+        const { base64Image, cuisine } = req.body; // Destructure cuisine from req.body 
 
         if (!base64Image) {
             return res.status(400).json({ error: 'Missing base64Image in request body.' });
@@ -41,9 +41,22 @@ module.exports = async (req, res) => {
 
         const modelId = 'gemini-2.5-flash';
 
+        // Construct the recipe generation instruction based on cuisine
+        let recipeInstruction = "Based on a reasonable selection of the identified ingredients (use as many as possible that make sense for a cohesive and appealing meal, but do not force unsuitable combinations), provide a simple, easy-to-cook meal recipe.";
+        
+        if (cuisine && cuisine !== "Any") {
+            recipeInstruction = `Based on a reasonable selection of the identified ingredients (use as many as possible that make sense for a cohesive and appealing meal, but do not force unsuitable combinations), provide a simple, easy-to-cook **${cuisine}** style meal recipe.`;
+        }
+
         const visionPrompt = [
             {
-                "text": "Analyze the image for main food ingredients. List the most prominent and suitable ones clearly under an 'Identified Ingredients:' heading. **Assume common kitchen essentials are available (cooking oils, salt, black pepper, basic spices like garlic powder/onion powder/red chili powder, and water/broth).** Based on a reasonable selection of the identified ingredients (use as many as possible that make sense for a cohesive meal, but do not force unsuitable combinations), provide a simple, easy-to-cook meal recipe. Present the recipe under a 'Recipe:' heading with detailed steps, yield, prep time, and cook time. If a truly suitable recipe cannot be created even with assumed essentials, explicitly state 'No suitable recipe can be created from the provided ingredients.' under the 'Recipe:' heading. Finally, include 1-2 practical cooking tips under a 'Tips:' heading. Ensure consistent formatting using Markdown for headings, bolding, and bullet points."
+                "text": `Carefully analyze the image to identify all prominent food ingredients. Focus on individual food items. List them clearly under an 'Identified Ingredients:' heading using bullet points. If no food items are clearly visible, state 'No specific ingredients identified.'
+
+                **ASSUMED ESSENTIALS:** Assume common kitchen essentials are available (cooking oils, salt, black pepper, basic spices like garlic powder/onion powder/red chili powder, and water/broth).
+
+                **RECIPE GENERATION:** ${recipeInstruction} Present the recipe under a 'Recipe:' heading with detailed steps, yield, prep time, and cook time. If a truly suitable recipe cannot be created even with assumed essentials, explicitly state 'No suitable recipe can be created from the provided ingredients.' under the 'Recipe:' heading.
+
+                Finally, include 1-2 practical cooking tips under a 'Tips:' heading. Ensure consistent formatting using Markdown for headings, bolding, and bullet points.`
             },
             {
                 "inlineData": {
