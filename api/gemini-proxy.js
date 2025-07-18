@@ -39,7 +39,7 @@ module.exports = async (req, res) => {
             return res.status(500).json({ error: 'Server configuration error: API key missing.' });
         }
 
-        const modelId = 'gemini-pro-vision';
+        const modelId = 'gemini-2.5-flash';
 
         const visionPrompt = [
             {
