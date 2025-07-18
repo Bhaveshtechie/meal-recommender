@@ -20,8 +20,8 @@
         </div>
 
         <div class="cuisine-selection">
-            <label for="cuisineSelect">Cuisine Preference:</label>
-            <select id="cuisineSelect">
+            <label for="cuisineSelect" class="cuisine-label">Cuisine Preference:</label>
+            <select id="cuisineSelect" class="cuisine-dropdown">
                 <option value="Any">Any Cuisine</option>
                 <option value="Indian">Indian</option>
                 <option value="Italian">Italian</option>
@@ -34,7 +34,7 @@
         </div>
 
         <button id="getRecipeButton" class="action-button" style="display:none;">Get Recipe Ideas</button>
-        
+        <button id="clearInputButton" class="secondary-button" style="display:none;">Start Over</button>
         <div id="loadingIndicator" class="loading-spinner" style="display:none;"></div>
 
         <div id="results">

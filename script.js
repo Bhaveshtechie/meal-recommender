@@ -19,6 +19,7 @@ function showLoading() {
     getRecipeButton.textContent = 'Processing...';
     hideResults();
     hideError();
+    clearInputButton.style.display = 'none'; // Hide clear button during processing
 }
 
 function hideLoading() {
@@ -30,6 +31,7 @@ function hideLoading() {
 function showResults() {
     ingredientsHeading.style.display = 'block';
     recipeHeading.style.display = 'block';
+    clearInputButton.style.display = 'block'; // Show clear button after results
 }
 
 function hideResults() {
@@ -38,11 +40,13 @@ function hideResults() {
     recipeOutput.innerHTML = ''; // Changed from .textContent
     ingredientsHeading.style.display = 'none';
     recipeHeading.style.display = 'none';
+    clearInputButton.style.display = 'none'; // Hide clear button when results are hidden
 }
 
 function showError(message) {
     errorDisplay.textContent = message;
     errorDisplay.style.display = 'block';
+    clearInputButton.style.display = 'block'; // Show clear button even on error
 }
 
 function hideError() {
@@ -50,15 +54,49 @@ function hideError() {
     errorDisplay.textContent = '';
 }
 
+// Function to reset all inputs and outputs
+function resetUI() {
+    hideError();
+    hideResults();
+    hideLoading(); // Ensure spinner is off and button is enabled
+    imagePreview.style.display = 'none';
+    imagePreview.src = '#'; // Clear image source
+    imageUpload.value = ''; // Clear file input
+    base64Image = '';
+    getRecipeButton.style.display = 'none'; // Hide Get Recipe button
+    cuisineSelect.style.display = 'none'; // Hide cuisine select
+    cuisineSelect.value = 'Any'; // Reset dropdown to default
+    clearInputButton.style.display = 'none'; // Ensure clear button is hidden initially
+}
+
 // --- Event Listeners ---
 
 imageUpload.addEventListener('change', function(event) {
     const file = event.target.files[0];
     if (file) {
+        if (!file.type.startsWith('image/')) {
+            showError('Please upload an image file (e.g., JPG, PNG).');
+            imagePreview.style.display = 'none';
+            base64Image = '';
+            getRecipeButton.style.display = 'none';
+            cuisineSelect.style.display = 'none';
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) { // 5 MB limit
+            showError('Image file is too large (max 5MB).');
+            imagePreview.style.display = 'none';
+            base64Image = '';
+            getRecipeButton.style.display = 'none';
+            cuisineSelect.style.display = 'none';
+            return;
+        }
+
         hideError(); // Clear previous errors
         hideResults(); // Clear previous results
         getRecipeButton.style.display = 'none'; // Hide button initially
         cuisineSelect.style.display = 'none';
+        clearInputButton.style.display = 'none'; // Hide clear button when new image is selected
 
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -77,12 +115,7 @@ imageUpload.addEventListener('change', function(event) {
         };
         reader.readAsDataURL(file);
     } else {
-        imagePreview.style.display = 'none';
-        getRecipeButton.style.display = 'none';
-        base64Image = '';
-        cuisineSelect.style.display = 'none'; // Hide cuisine select if no file
-        hideResults();
-        hideError();
+        resetUI(); // If no file selected (e.g., user cancels), reset everything
     }
 });
 
@@ -166,3 +199,5 @@ getRecipeButton.addEventListener('click', async function() {
         hideLoading(); // Hide spinner regardless of success or failure
     }
 });
+
+clearInputButton.addEventListener('click', resetUI);
